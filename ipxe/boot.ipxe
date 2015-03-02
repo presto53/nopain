@@ -1,0 +1,19 @@
+#!ipxe
+prompt --key 0x02 --timeout 2000 Press Ctrl-B for the iPXE command line... && shell ||
+dhcp
+set password NoPain
+
+params
+param uuid ${uuid}
+param password ${password}
+
+#Iterate over all network devices and set params
+set idx:int32 0
+:loop isset ${net${idx}/mac} || goto loop_done
+  echo net${idx} is a ${net${idx}/chip} with MAC ${net${idx}/mac}
+  param net${idx}_mac ${net${idx}/mac}
+  param net${idx}_chip ${net${idx}/chip}
+  inc idx && goto loop
+:loop_done
+#chain --timeout 10 http://pxeboot.${domain}/blondy/boot##params || shell
+chain --timeout 3000 http://192.168.1.1:9292/api/ipxe##params || reboot
