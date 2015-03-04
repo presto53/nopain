@@ -1,4 +1,4 @@
 $LOAD_PATH << '.'
-require 'api'
+require 'lib/api'
 
 run NoPaIn::API
