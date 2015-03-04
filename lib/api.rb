@@ -1,3 +1,5 @@
+$LOAD_PATH << '.'
+require_relative 'datamodel'
 require 'grape'
 require 'json'
 
