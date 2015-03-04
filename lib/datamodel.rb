@@ -2,6 +2,8 @@ $LOAD_PATH << '.'
 require 'mongoid'
 require_relative 'filters'
 
+Mongoid.load!("#{ENV['CONFIGPATH'] || File.dirname(__FILE__) + '/../config/'}/mongoid.yml")
+
 module NoPain
     class Host
       include Mongoid::Document
