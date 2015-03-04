@@ -14,7 +14,7 @@ module NoPain
       field :hostname, type: String
       field :ip, type: String
       field :hwaddr, type: Array
-      field :tags, type: Array
+      field :tags, type: Array, default: ['new']
       field :boot, type: Boolean, default: false
       field :install, type: Boolean, default: false
       field :checkin, type: DateTime
