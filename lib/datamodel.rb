@@ -18,7 +18,6 @@ module NoPain
       field :checkin, type: DateTime
       field :env, type: Hash
       validates :uuid, presence: true, format: { with: UUID }
-      validates :ip, presence: true, format: { with: IP }
       validates_uniqueness_of :uuid
       index({ uuid: 1, hostname: 1 }, { unique: true })
 

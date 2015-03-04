@@ -1,0 +1,13 @@
+development:
+  sessions:
+    default:
+      database: nopain
+      hosts:
+        - localhost:27017
+production:
+  sessions:
+    default:
+      database: nopain
+      hosts:
+        - localhost:27017
+
