@@ -47,9 +47,9 @@ module NoPain
       include NoPain::Data::Filters
       has_many :hosts
       field :name, type: String
-      field :image, type: String
+      field :file, type: String
       validates :name, presence: true, format: { with: NAME }
-      validates :image, presence: true, format: { with: FILENAME }
+      validates :file, presence: true, format: { with: FILENAME }
     end
 
     class Network
