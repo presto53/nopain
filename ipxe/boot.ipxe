@@ -6,6 +6,7 @@ set password NoPain
 params
 param uuid ${uuid}
 param password ${password}
+param ip ${ip}
 
 #Iterate over all network devices and set params
 set idx:int32 0

@@ -2,6 +2,7 @@ $LOAD_PATH << '.'
 require 'mongoid'
 require_relative 'filters'
 
+Mongoid.raise_not_found_error = false
 Mongoid.load!("#{ENV['CONFIGPATH'] || File.dirname(__FILE__) + '/../config/'}/mongoid.yml")
 
 module NoPain
@@ -13,7 +14,7 @@ module NoPain
       field :uuid, type: String
       field :hostname, type: String
       field :ip, type: String
-      field :hwaddr, type: Array
+      field :hwaddr, type: Hash
       field :tags, type: Array, default: ['new']
       field :boot, type: Boolean, default: false
       field :install, type: Boolean, default: false
@@ -28,7 +29,7 @@ module NoPain
       private
 
       def normalize
-        self.hwaddr.map! { |addr| addr.downcase }
+        self.hwaddr.each { |dev,mac| self.hwaddr[dev] = mac.downcase }
       end
     end
 
