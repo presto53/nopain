@@ -29,7 +29,7 @@ module NoPain
       private
 
       def normalize
-        self.hwaddr.each { |dev,mac| self.hwaddr[dev] = mac.downcase }
+        self.hwaddr.each { |dev,mac| self.hwaddr[dev] = mac.downcase } if self.hwaddr
       end
     end
 
