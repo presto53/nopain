@@ -29,7 +29,7 @@ module NoPaIn
 	hosts = find_hosts(params)
 	if hosts && !hosts.empty?
 	  status 200
-	  hosts
+	  expand(hosts)
 	else
 	  status 404
 	end
@@ -45,7 +45,7 @@ module NoPaIn
 	images = find_images(params)
 	if images && !images.empty?
 	  status 200
-	  images
+	  expand(images)
 	else
 	  status 404
 	end
@@ -61,7 +61,7 @@ module NoPaIn
 	scripts = find_scripts(params)
 	if scripts && !scripts.empty?
 	  status 200
-	  scripts
+	  expand(scripts)
 	else
 	  status 404
 	end
@@ -91,6 +91,25 @@ module NoPaIn
     end
 
     helpers do
+      def expand(items)
+	expanded_items = Array.new
+	items.each do |item|
+	  tmp_item = Hash.new
+	  item.fields.each do |key,value|
+	    next if key == '_id'
+	    if /_id\z/ =~ key
+	      tmp_key = key.gsub(/_id\z/,'')
+	      tmp_item[tmp_key] = nil
+	      tmp_item[tmp_key] = item.method(tmp_key.to_sym).call.name if item.method(tmp_key.to_sym).call
+	    else
+	      tmp_item[key] = item[key]
+	    end
+	  end
+	  expanded_items << tmp_item
+	end
+	expanded_items
+      end
+
       def find_images(params)
 	if params[:name]
 	  images = NoPain::BootImage.where(name: /#{params[:name]}/)
