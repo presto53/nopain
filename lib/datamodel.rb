@@ -41,6 +41,7 @@ module NoPain
       field :script, type: String
       validates :name, presence: true, format: { with: NAME }
       validates :script, presence: true, format: { with: FILENAME }
+      validates_uniqueness_of :name
     end
 
     class BootImage
@@ -51,6 +52,7 @@ module NoPain
       field :file, type: String
       validates :name, presence: true, format: { with: NAME }
       validates :file, presence: true, format: { with: FILENAME }
+      validates_uniqueness_of :name
     end
 
     class Network
@@ -62,5 +64,6 @@ module NoPain
       validates :name, presence: true, format: { with: NETWORK_NAME }
       validates :network, presence: true, format: { with: NETWORK }
       validates :vlan, presence: true, format: { with: VLAN }
+      validates_uniqueness_of :name
     end
 end

@@ -1,5 +1,5 @@
 $LOAD_PATH << '.'
-require 'thin'
+require 'puma'
 require 'lib/api'
 
 run NoPaIn::API

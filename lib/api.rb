@@ -11,8 +11,8 @@ module NoPaIn
     format :json
     prefix :api
 
-    resource :config do
-      desc "Get config(s) for host(s)."
+    resource :hosts do
+      desc "Get hosts configs."
       params do
 	optional :hostname, type: String, desc: "String representing hostname, could be a regexp."
 	optional :tags, type: String, desc: "Space delimited tags"
@@ -30,6 +30,38 @@ module NoPaIn
 	if hosts && !hosts.empty?
 	  status 200
 	  hosts
+	else
+	  status 404
+	end
+      end
+    end
+
+    resource :boot_images do
+      desc "Get boot images list."
+      params do
+	optional :name, type: String, desc: "Name of image"
+      end
+      get do
+	images = find_images(params)
+	if images && !images.empty?
+	  status 200
+	  images
+	else
+	  status 404
+	end
+      end
+    end
+
+    resource :install_scripts do
+      desc "Get install scripts list."
+      params do
+	optional :name, type: String, desc: "Name of script"
+      end
+      get do
+	scripts = find_scripts(params)
+	if scripts && !scripts.empty?
+	  status 200
+	  scripts
 	else
 	  status 404
 	end
@@ -59,6 +91,24 @@ module NoPaIn
     end
 
     helpers do
+      def find_images(params)
+	if params[:name]
+	  images = NoPain::BootImage.where(name: /#{params[:name]}/)
+	else
+	  images = NoPain::BootImage.all
+	end
+	images
+      end
+
+      def find_scripts(params)
+	if params[:name]
+	  scripts = NoPain::InstallScript.where(name: /#{params[:name]}/)
+	else
+	  scripts = NoPain::InstallScript.all
+	end
+	scripts
+      end
+
       def find_hosts(params)
 	if params[:uuid]
 	  hosts = NoPain::Host.where(uuid: params[:uuid])
@@ -84,8 +134,8 @@ module NoPaIn
 	@intags = tags.split(' ').map {|tag| tag if /\A[^!]/ =~ tag}.compact
 	@nintags = tags.split(' ').map {|tag| tag[1..-1] if /\A!/ =~ tag}.compact
 	if hosts
-	    hosts = hosts.in(tags: @intags)
-	    hosts = hosts.nin(tags: @nintags)
+	  hosts = hosts.in(tags: @intags)
+	  hosts = hosts.nin(tags: @nintags)
 	else
 	  hosts = NoPain::Host.in(tags: @intags)
 	  if hosts
