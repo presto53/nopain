@@ -2,6 +2,7 @@ $LOAD_PATH << '.'
 require_relative 'datamodel'
 require 'grape'
 require 'json'
+require 'net-ldap'
 
 module NoPaIn
   class API < Grape::API
@@ -26,6 +27,7 @@ module NoPaIn
 	at_least_one_of :uuid, :hostname, :tags, :boot, :install
       end
       get do
+        authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
 	hosts = find_hosts(params)
 	if hosts && !hosts.empty?
 	  status 200
@@ -42,6 +44,7 @@ module NoPaIn
 	optional :name, type: String, desc: "Name of image"
       end
       get do
+        authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
 	images = find_images(params)
 	if images && !images.empty?
 	  status 200
@@ -58,6 +61,7 @@ module NoPaIn
 	optional :name, type: String, desc: "Name of script"
       end
       get do
+        authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
 	scripts = find_scripts(params)
 	if scripts && !scripts.empty?
 	  status 200
@@ -76,7 +80,7 @@ module NoPaIn
 	requires :ip, type: String, desc: "Temporary host IP received from DHCP server", regexp: UUID
       end
       post do
-	authenticate!(params[:password])
+	pxe_authenticate!(params[:password])
 	logger.info "Request from host: #{params[:uuid]}"
 	host = NoPain::Host.find_by(uuid: params[:uuid])
 	if host 
@@ -204,15 +208,30 @@ module NoPaIn
       end
 
       def return_image(host)
-	status 200
-	env['api.format'] = :binary
-	content_type 'application/octet-stream'
-	File.binread(host.boot_image.file).force_encoding('utf-8') rescue \
-	  logger.error "Error while reading boot image for #{host.uuid}"
+	if host.boot
+	  status 200
+	  env['api.format'] = :binary
+	  content_type 'application/octet-stream'
+	  File.binread(NoPain::CONFIG['images_path'] + '/' + host.boot_image.file).force_encoding('utf-8') rescue \
+	    logger.error "Error while reading boot image for #{host.uuid}"
+	else
+	  status 403
+	end
       end
 
-      def authenticate!(password)
-	error!('401 Unauthorized', 401) unless password == 'NoPain'
+      def pxe_authenticate!(password)
+	error!('401 Unauthorized', 401) unless password == NoPain::CONFIG['pxe_password']
+      end
+
+      def authenticate!(login=nil,password=nil)
+	NoPain::CONFIG['auth'] == 'no' ? true : ldap_auth(login,password)
+      end
+
+      def ldap_auth(login,password)
+	ldap = Net::LDAP.new
+	ldap.host = NoPain::CONFIG['ldap_server']
+	ldap.auth "cn=#{login},#{NoPain::CONFIG['ldap_bind_dn']}", password
+	ldap.bind rescue error!('Access Denied', 401)
       end
 
       def logger

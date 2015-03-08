@@ -1,0 +1,5 @@
+auth: 'no'
+ldap_server: 'ldap.example.com'
+ldap_bind_dn: 'ou=services,dc=example,dc=com'
+pxe_password: 'NoPain'
+images_path: '/data/pxe_images'

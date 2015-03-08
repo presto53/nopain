@@ -4,6 +4,7 @@ gem 'grape'
 gem 'json'
 gem 'mongoid'
 gem 'puma'
+gem 'net-ldap'
 
 group :development do
   gem 'pry'
