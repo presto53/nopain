@@ -27,9 +27,12 @@ module NoPaIn
       end
       get do
 	hosts = find_hosts(params)
-	status 404 unless hosts
-	status 404 if hosts && hosts.empty?
-	hosts
+	if hosts && !hosts.empty?
+	  status 200
+	  hosts
+	else
+	  status 404
+	end
       end
     end
 
