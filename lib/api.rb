@@ -26,6 +26,10 @@ module NoPaIn
 	at_least_one_of :uuid, :hostname, :tags, :boot, :install
       end
       get do
+	hosts = find_hosts(params)
+	status 404 unless hosts
+	status 404 if hosts && hosts.empty?
+	hosts
       end
     end
 
@@ -52,6 +56,62 @@ module NoPaIn
     end
 
     helpers do
+      def find_hosts(params)
+	if params[:uuid]
+	  hosts = NoPain::Host.where(uuid: params[:uuid])
+	else
+	  hosts = filter_by_hostname(hosts, params[:hostname]) if params[:hostname]
+	  hosts = filter_by_tags(hosts, params[:tags]) if params[:tags]
+	  hosts = filter_by_boot(hosts, params[:boot]) if params[:boot]
+	  hosts = filter_by_install(hosts, params[:install]) if params[:install]
+	end
+	hosts
+      end
+
+      def filter_by_hostname(hosts, hostname)
+	if hosts
+	  hosts = hosts.where(hostname: /#{hostname}/)
+	else
+	  hosts = NoPain::Host.where(hostname: /#{hostname}/)
+	end
+	hosts
+      end
+
+      def filter_by_tags(hosts, tags)
+	@intags = tags.split(' ').map {|tag| tag if /\A[^!]/ =~ tag}.compact
+	@nintags = tags.split(' ').map {|tag| tag[1..-1] if /\A!/ =~ tag}.compact
+	if hosts
+	    hosts = hosts.in(tags: @intags)
+	    hosts = hosts.nin(tags: @nintags)
+	else
+	  hosts = NoPain::Host.in(tags: @intags)
+	  if hosts
+	    hosts = hosts.nin(tags: @nintags)
+	  else
+	    hosts = NoPain::Host.nin(tags: @nintags)
+	  end
+	end
+	hosts
+      end
+
+      def filter_by_boot(hosts, boot)
+	if hosts
+	  hosts = hosts.where(boot: boot)
+	else
+	  hosts = NoPain::Host.where(boot: boot)
+	end
+	hosts
+      end
+
+      def filter_by_install(hosts, install)
+	if hosts
+	  hosts = hosts.where(install: install)
+	else
+	  hosts = NoPain::Host.where(install: install)
+	end
+	hosts
+      end
+
       def create_host(params)
 	host = NoPain::Host.new
 	host.uuid = params[:uuid]
