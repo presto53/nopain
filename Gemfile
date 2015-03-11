@@ -5,6 +5,7 @@ gem 'json'
 gem 'mongoid'
 gem 'puma'
 gem 'net-ldap'
+gem 'rest-client'
 
 group :development do
   gem 'pry'
