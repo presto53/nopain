@@ -6,6 +6,8 @@ gem 'mongoid'
 gem 'puma'
 gem 'net-ldap'
 gem 'rest-client'
+gem 'docopt'
+gem 'awesome_print'
 
 group :development do
   gem 'pry'
