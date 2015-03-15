@@ -4,11 +4,12 @@ require 'json'
 require 'yaml'
 require 'digest'
 require 'docopt'
+require 'base64'
 require 'awesome_print'
 
 module NoPain
   class Client
-    attr_reader :options
+    attr_reader :options, :error
 
     def self.die(msg, code)
       STDERR.puts msg
@@ -22,34 +23,51 @@ module NoPain
       @login = CONFIG['login']
       @password = CONFIG['password']
       read_options
-    end
-
-    def get_hosts
-      params = Hash.new
+      @params = Hash.new
       @options['<hostname>'] ||= '.*'
-      params[:hostname] = @options['<hostname>'] 
-      params[:tags] = @options['--tags'] if @options['--tags']
-      params[:boot] = @options['--boot'] if @options['--boot']
-      params[:install] = @options['--install'] if @options['--install']
-      params[:uuid] = @options['--uuid'] if @options['--uuid']
-      resp = RestClient.get("#{@url}/hosts", params: params, 'X-NoPain-Login' => @login, 'X-NoPain-Password' => Digest::SHA256.hexdigest(@password) )
-      JSON.parse(resp)
+      @options['<name>'] ||= '.*'
+      @params[:hostname] = @options['<hostname>'] unless @options['--uuid']
+      @params[:tags] = @options['--tags'] if @options['--tags']
+      @params[:boot] = @options['--boot'] if @options['--boot']
+      @params[:install] = @options['--install'] if @options['--install']
+      @params[:uuid] = @options['--uuid'] if @options['--uuid']
+      @params[:name] = @options['<name>'] if @options['image'] || @options['script']
     end
 
-    def get_images
-      params = Hash.new
-      @options['<name>'] ||= '.*'
-      params[:name] = @options['<name>'] 
-      resp = RestClient.get("#{@url}/boot_images", params: params, 'X-NoPain-Login' => @login, 'X-NoPain-Password' => Digest::SHA256.hexdigest(@password) )
-      JSON.parse(resp)
+    def get(item)
+      begin
+        resp = RestClient.get("#{@url}/#{item}", params: @params, 
+			                         'X-NoPain-Login' => @login, 
+						 'X-NoPain-Password' => Digest::SHA256.hexdigest(@password) )
+      rescue => e
+	if e.methods.include?(:response)
+	  resp = e.response.code
+	elsif e.methods.include?(:message)
+	  resp = e.message
+	else
+	  resp = 'Unknown error'
+	end
+	@error = true
+      end
+      JSON.parse(resp) rescue { error: resp }
     end
 
-    def get_scripts
-      params = Hash.new
-      @options['<name>'] ||= '.*'
-      params[:name] = @options['<name>'] 
-      resp = RestClient.get("#{@url}/install_scripts", params: params, 'X-NoPain-Login' => @login, 'X-NoPain-Password' => Digest::SHA256.hexdigest(@password) )
-      JSON.parse(resp)
+    def set(item,conf)
+      @params[:conf] = Base64.encode64(conf.to_json)
+      begin
+        resp = RestClient.post("#{@url}/#{item}", @params, { 'X-NoPain-Login' => @login, 
+							     'X-NoPain-Password' => Digest::SHA256.hexdigest(@password)} )
+      rescue => e
+	if e.methods.include?(:response)
+	  resp = e.response.code
+	elsif e.methods.include?(:message)
+	  resp = e.message
+	else
+	  resp = 'Unknown error'
+	end
+	@error = true
+      end
+      JSON.parse(resp) rescue { error: resp }
     end
 
     def read_options
@@ -84,7 +102,7 @@ DOCOPT
     end
 
     def validate_options(options)
-      #ap options
+      ap options if ENV['DEBUG'] == 'YES'
       true
     end
 
@@ -96,6 +114,47 @@ AwesomePrint.defaults = {
   sort_keys: true 
 }
 
-client = NoPain::Client.new
-ap client.get_hosts if client.options['host'] && client.options['show']
-ap client.get_images if client.options['image'] && client.options['show']
+@client = NoPain::Client.new
+
+def get_conf
+  resp = {}
+  %w(host script image).each do |item|
+    resp = @client.get(item) if @client.options[item]
+  end
+  resp
+end
+
+def set_conf(conf)
+  resp = {}
+  %w(host script image).each do |item|
+    resp = @client.set(item,conf) if @client.options[item]
+  end
+  resp
+end
+
+if @client.options['show']
+  ap get_conf
+elsif @client.options['edit']
+  editor = ENV['EDITOR'] ? ENV['EDITOR'] : 'vi'
+  conf = get_conf
+  if @client.error
+    ap conf 
+    exit 1
+  else
+    file = "/tmp/#{Digest::SHA256.hexdigest(@client.options.to_s)}"
+    File.open(file, 'w') { |file| file.write(JSON.pretty_generate(conf)) }
+    system("#{editor} #{file}")
+    begin
+      ap set_conf(JSON.parse(File.read(file)))
+    rescue => e
+      STDERR.puts "ERROR: #{e.message}"
+    end
+    File.delete(file)
+  end
+elsif @client.options['boot']
+  puts 'Not implemented yet'
+elsif @client.options['install']
+  puts 'Not implemented yet'
+else
+  puts 'Some shit happened. Call 8-800-SPORTLOTO.'
+end
