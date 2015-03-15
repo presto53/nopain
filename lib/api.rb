@@ -3,6 +3,8 @@ require_relative 'datamodel'
 require 'grape'
 require 'json'
 require 'net-ldap'
+require 'base64'
+require 'awesome_print'
 
 module NoPaIn
   class API < Grape::API
@@ -12,63 +14,84 @@ module NoPaIn
     format :json
     prefix :api
 
-    resource :hosts do
+    before do
+      authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
+    end
+    params do
+      optional :hostname, type: String, desc: "String representing hostname, could be a regexp."
+      optional :tags, type: String, desc: "Space delimited tags"
+      optional :boot, type: String, desc: "Boot enabled/disabled"
+      optional :install, type: String, desc: "Install enabled/disabled"
+      optional :uuid, type: String, desc: "Server UUID"
+      mutually_exclusive :uuid, :hostname
+      mutually_exclusive :uuid, :tags
+      mutually_exclusive :uuid, :boot
+      mutually_exclusive :uuid, :install
+      at_least_one_of :uuid, :hostname, :tags, :boot, :install
+    end
+    resource :host do
       desc "Get hosts configs."
-      params do
-	optional :hostname, type: String, desc: "String representing hostname, could be a regexp."
-	optional :tags, type: String, desc: "Space delimited tags"
-	optional :boot, type: String, desc: "Boot enabled/disabled"
-	optional :install, type: String, desc: "Install enabled/disabled"
-	optional :uuid, type: String, desc: "Server UUID"
-	mutually_exclusive :uuid, :hostname
-	mutually_exclusive :uuid, :tags
-	mutually_exclusive :uuid, :boot
-	mutually_exclusive :uuid, :install
-	at_least_one_of :uuid, :hostname, :tags, :boot, :install
-      end
       get do
-        authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
 	hosts = find_hosts(params)
 	if hosts && !hosts.empty?
 	  status 200
 	  expand(hosts)
 	else
 	  status 404
+	  {error: 'Not found'}
 	end
+      end
+      post do
+	status 200
+	ap JSON.parse(Base64.decode64(params['conf']))
       end
     end
 
-    resource :boot_images do
+    before do
+      authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
+    end
+    params do
+      optional :name, type: String, desc: "Name of image"
+    end
+    resource :image do
       desc "Get boot images list."
-      params do
-	optional :name, type: String, desc: "Name of image"
-      end
       get do
-        authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
 	images = find_images(params)
 	if images && !images.empty?
 	  status 200
 	  expand(images)
 	else
 	  status 404
+	  {error: 'Not found'}
 	end
+      end
+      post do
+	status 200
+	ap JSON.parse(Base64.decode64(params['conf']))
       end
     end
 
-    resource :install_scripts do
+    before do
+      authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
+    end
+    params do
+      optional :name, type: String, desc: "Name of image"
+    end
+    resource :script do
       desc "Get install scripts list."
-      params do
-	optional :name, type: String, desc: "Name of script"
-      end
       get do
-        authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
 	scripts = find_scripts(params)
 	if scripts && !scripts.empty?
 	  status 200
 	  expand(scripts)
 	else
 	  status 404
+	  {error: 'Not found'}
 	end
+      end
+      post do
+	status 200
+	ap JSON.parse(Base64.decode64(params['conf']))
       end
     end
 
