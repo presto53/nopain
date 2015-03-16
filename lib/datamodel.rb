@@ -17,7 +17,7 @@ module NoPain
       field :boot, type: Boolean, default: false
       field :install, type: Boolean, default: false
       field :checkin, type: DateTime
-      field :env, type: Hash
+      field :env, type: Array, default: ['NOPAIN="YES"']
       field :install_script, type: String
       field :boot_image, type: String
       validates :uuid, presence: true, format: { with: UUID }

@@ -51,6 +51,16 @@ module NoPaIn
       post do
 	modify(params)
       end
+      get '/env' do
+	content_type 'text/plain'
+	env['api.format'] = :binary
+	params[:uuid] ? NoPain::Host.find_by(uuid: params[:uuid]).env.join("\n") : {error: 'you need to specify uuid'}
+      end
+      get '/install_script' do
+	content_type 'text/plain'
+	env['api.format'] = :binary
+	params[:uuid] ? NoPain::Host.find_by(uuid: params[:uuid]).install_script : {error: 'you need to specify uuid'}
+      end
     end
 
     resource :ipxe do
