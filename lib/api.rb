@@ -76,10 +76,14 @@ module NoPaIn
 	      image = NoPain::BootImage.new
 	      create = true
 	    end
-	    item.each { |key,value| image[key] = value }
-	    name = item['name']? item['name'] : item
-	    if image.changed?
-	      result << "fail while #{create ? 'create' : 'modify'} #{name}" unless image.save
+	    if image
+	      item.each { |key,value| image[key] = value }
+	      name = item['name']? item['name'] : item
+	      if image.changed?
+		result << "fail while #{create ? 'create' : 'modify'} #{name}" unless image.save
+	      end
+	    else
+	      result << "fail while modify #{item}"
 	    end
 	  end
 	  if result.empty?
@@ -115,8 +119,37 @@ module NoPaIn
 	end
       end
       post do
-	status 200
-	ap JSON.parse(Base64.decode64(params['conf']))
+	begin
+	  conf = JSON.parse(Base64.decode64(params['conf']))
+	  result = Array.new
+	  conf.each do |item|
+	    if item['_id']
+	      image = NoPain::InstallScript.find_by(id: item['_id'])
+	    else
+	      image = NoPain::InstallScript.new
+	      create = true
+	    end
+	    if image
+	      item.each { |key,value| image[key] = value }
+	      name = item['name']? item['name'] : item
+	      if image.changed?
+		result << "fail while #{create ? 'create' : 'modify'} #{name}" unless image.save
+	      end
+	    else
+	      result << "fail while modify #{item}"
+	    end
+	  end
+	  if result.empty?
+	    status 200
+	    result = 'complete'
+	  else
+	    status 400
+	  end
+	  {status: result}
+	rescue
+	  status 400
+	  {error: 'Error while parsing configuration.'}
+	end
       end
     end
 
