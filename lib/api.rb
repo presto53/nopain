@@ -4,6 +4,7 @@ require 'grape'
 require 'json'
 require 'net-ldap'
 require 'base64'
+require 'digest'
 require 'awesome_print'
 
 module NoPaIn
@@ -34,62 +35,21 @@ module NoPaIn
       get do
 	hosts = find_hosts(params)
 	if hosts && !hosts.empty?
+	  fixed_hosts = Array.new
+	  hosts.each do |host|
+	    tmp_host = JSON.parse(host.to_json)
+	    tmp_host['_id'] = host.id.to_s
+	    fixed_hosts << tmp_host
+	  end
 	  status 200
-	  expand(hosts)
+	  fixed_hosts
 	else
 	  status 404
 	  {error: 'Not found'}
 	end
       end
       post do
-	status 200
-	ap JSON.parse(Base64.decode64(params['conf']))
-      end
-    end
-
-    before do
-      authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
-    end
-    params do
-      optional :name, type: String, desc: "Name of image"
-    end
-    resource :image do
-      desc "Get boot images list."
-      get do
-	images = find_images(params)
-	if images && !images.empty?
-	  status 200
-	  expand(images)
-	else
-	  status 404
-	  {error: 'Not found'}
-	end
-      end
-      post do
-	modify(params, :image)
-      end
-    end
-
-    before do
-      authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
-    end
-    params do
-      optional :name, type: String, desc: "Name of image"
-    end
-    resource :script do
-      desc "Get install scripts list."
-      get do
-	scripts = find_scripts(params)
-	if scripts && !scripts.empty?
-	  status 200
-	  expand(scripts)
-	else
-	  status 404
-	  {error: 'Not found'}
-	end
-      end
-      post do
-	modify(params, :script)
+	modify(params)
       end
     end
 
@@ -116,93 +76,29 @@ module NoPaIn
     end
 
     helpers do
-      def expand(items)
-	expanded_items = Array.new
-	items.each do |item|
-	  tmp_item = Hash.new
-	  item.fields.each do |key,value|
-	    if key == '_id'
-	      tmp_item[key] = item[key].to_s
-	    elsif /_id\z/ =~ key
-	      tmp_key = key.gsub(/_id\z/,'')
-	      tmp_item[tmp_key] = nil
-	      tmp_item[tmp_key] = item.method(tmp_key.to_sym).call.name if item.method(tmp_key.to_sym).call
-	    else
-	      tmp_item[key] = item[key]
-	    end
-	  end
-	  expanded_items << tmp_item
-	end
-	expanded_items
-      end
-
-      def modify(params,type)
+      def modify(params)
 	begin
 	  conf = JSON.parse(Base64.decode64(params['conf']))
-	  result = Array.new
-	  conf.each do |item|
-	    script = find_or_create(item, type)
-	    unit = script[:item]
-	    create = script[:new]
-	    ap unit
-	    ap create
-	    if unit
-	      item.each { |key,value| unit[key] = value }
-	      name = item['name']? item['name'] : item
-	      if unit.changed?
-		result << "fail while #{create ? 'create' : 'modify'} #{name}" unless unit.save
-	      end
-	    else
-	      result << "fail while modify #{item}"
+	  errors = Array.new
+	  conf.each do |host|
+	    tmp_host = NoPain::Host.find(host['_id']) if host['_id']
+	    tmp_host = NoPain::Host.new unless tmp_host
+	    host.each_key do |field|
+	      tmp_host[field] = host[field]
 	    end
+	    errors << {host: host, errors: tmp_host.errors.messages} unless tmp_host.save
 	  end
-	  if result.empty?
+	  if errors.empty?
 	    status 200
-	    result = 'complete'
+	    {status: 'complete'}
 	  else
 	    status 400
+	    {error: "Error while creating/modifying hosts: #{errors}"}
 	  end
-	  {status: result}
 	rescue
 	  status 400
 	  {error: 'Error while parsing configuration.'}
 	end
-      end
-
-      def find_or_create(item, type)
-	result = Hash.new
-	case type
-	when :script
-	  klass = NoPain::InstallScript
-	when :image
-	  klass = NoPain::BootImage
-	end
-	if item['_id']
-	  result[:item] = klass.find_by(id: item['_id'])
-	  result[:new] = false
-	else
-	  result[:item] = klass.new
-	  result[:new] = true
-	end
-	result
-      end
-
-      def find_images(params)
-	if params[:name]
-	  images = NoPain::BootImage.where(name: /#{params[:name]}/)
-	else
-	  images = NoPain::BootImage.all
-	end
-	images
-      end
-
-      def find_scripts(params)
-	if params[:name]
-	  scripts = NoPain::InstallScript.where(name: /#{params[:name]}/)
-	else
-	  scripts = NoPain::InstallScript.all
-	end
-	scripts
       end
 
       def find_hosts(params)
@@ -264,7 +160,7 @@ module NoPaIn
       def create_host(params)
 	host = NoPain::Host.new
 	host.uuid = params[:uuid]
-	host.hostname = Resolv.getname(params[:ip]) rescue 'nopain'
+	host.hostname = Resolv.getname(params[:ip]) rescue Digest::SHA256.hexdigest(Time.now.to_s)
 	host.ip = params[:ip]
 	host.checkin = Time.now
 	update_hwaddrs(host,params)
@@ -285,7 +181,7 @@ module NoPaIn
 	  status 200
 	  env['api.format'] = :binary
 	  content_type 'application/octet-stream'
-	  File.binread(NoPain::CONFIG['images_path'] + '/' + host.boot_image.file).force_encoding('utf-8') rescue \
+	  File.binread(NoPain::CONFIG['images_path'] + '/' + host.boot_image).force_encoding('utf-8') rescue \
 	    logger.error "Error while reading boot image for #{host.uuid}"
 	else
 	  status 403

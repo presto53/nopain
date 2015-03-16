@@ -31,7 +31,6 @@ module NoPain
       @params[:boot] = @options['--boot'] if @options['--boot']
       @params[:install] = @options['--install'] if @options['--install']
       @params[:uuid] = @options['--uuid'] if @options['--uuid']
-      @params[:name] = @options['<name>'] if @options['image'] || @options['script']
     end
 
     def get(item)
@@ -77,7 +76,6 @@ Client for NoPain installer.
 Usage:
   #{__FILE__} (show|edit|delete) host [<hostname>] [--tags=<tags>] [--boot=<boolean>] [--install=<boolean>]
   #{__FILE__} (show|edit|delete) host --uuid=<uuid>
-  #{__FILE__} (show|edit|delete) (image|script) [<name>]
   #{__FILE__} (boot|install) (enable|disable) [<hostname>] [--tags=<tags>] [--boot=<boolean>] [--install=<boolean>]
   #{__FILE__} (boot|install) (enable|disable) --uuid=<uuid>
   #{__FILE__} -h | --help
@@ -117,19 +115,11 @@ AwesomePrint.defaults = {
 @client = NoPain::Client.new
 
 def get_conf
-  resp = {}
-  %w(host script image).each do |item|
-    resp = @client.get(item) if @client.options[item]
-  end
-  resp
+    @client.get('host')
 end
 
 def set_conf(conf)
-  resp = {}
-  %w(host script image).each do |item|
-    resp = @client.set(item,conf) if @client.options[item]
-  end
-  resp
+  @client.set('host',conf)
 end
 
 if @client.options['show']

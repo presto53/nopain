@@ -9,8 +9,6 @@ module NoPain
     class Host
       include Mongoid::Document
       include NoPain::Data::Filters
-      belongs_to :install_script
-      belongs_to :boot_image
       field :uuid, type: String
       field :hostname, type: String
       field :ip, type: String
@@ -20,8 +18,12 @@ module NoPain
       field :install, type: Boolean, default: false
       field :checkin, type: DateTime
       field :env, type: Hash
+      field :install_script, type: String
+      field :boot_image, type: String
       validates :uuid, presence: true, format: { with: UUID }
-      validates_uniqueness_of :uuid
+      validates :install_script, format: { with: FILENAME }, allow_nil: true
+      validates :boot_image, format: { with: FILENAME }, allow_nil: true
+      validates_uniqueness_of :uuid, :hostname
       index({ uuid: 1, hostname: 1 }, { unique: true })
 
       before_save :normalize
@@ -31,28 +33,6 @@ module NoPain
       def normalize
         self.hwaddr.each { |dev,mac| self.hwaddr[dev] = mac.downcase } if self.hwaddr
       end
-    end
-
-    class InstallScript
-      include Mongoid::Document
-      include NoPain::Data::Filters
-      has_many :hosts
-      field :name, type: String
-      field :script, type: String
-      validates :name, presence: true, format: { with: NAME }
-      validates :script, presence: true, format: { with: FILENAME }
-      validates_uniqueness_of :name
-    end
-
-    class BootImage
-      include Mongoid::Document
-      include NoPain::Data::Filters
-      has_many :hosts
-      field :name, type: String
-      field :file, type: String
-      validates :name, presence: true, format: { with: NAME }
-      validates :file, presence: true, format: { with: FILENAME }
-      validates_uniqueness_of :name
     end
 
     class Network
