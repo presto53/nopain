@@ -66,8 +66,33 @@ module NoPaIn
 	end
       end
       post do
-	status 200
-	ap JSON.parse(Base64.decode64(params['conf']))
+	begin
+	  conf = JSON.parse(Base64.decode64(params['conf']))
+	  result = Array.new
+	  conf.each do |item|
+	    if item['_id']
+	      image = NoPain::BootImage.find_by(id: item['_id'])
+	    else
+	      image = NoPain::BootImage.new
+	      create = true
+	    end
+	    item.each { |key,value| image[key] = value }
+	    name = item['name']? item['name'] : item
+	    if image.changed?
+	      result << "fail while #{create ? 'create' : 'modify'} #{name}" unless image.save
+	    end
+	  end
+	  if result.empty?
+	    status 200
+	    result = 'complete'
+	  else
+	    status 400
+	  end
+	  {status: result}
+	rescue
+	  status 400
+	  {error: 'Error while parsing configuration.'}
+	end
       end
     end
 
@@ -123,8 +148,9 @@ module NoPaIn
 	items.each do |item|
 	  tmp_item = Hash.new
 	  item.fields.each do |key,value|
-	    next if key == '_id'
-	    if /_id\z/ =~ key
+	    if key == '_id'
+	      tmp_item[key] = item[key].to_s
+	    elsif /_id\z/ =~ key
 	      tmp_key = key.gsub(/_id\z/,'')
 	      tmp_item[tmp_key] = nil
 	      tmp_item[tmp_key] = item.method(tmp_key.to_sym).call.name if item.method(tmp_key.to_sym).call

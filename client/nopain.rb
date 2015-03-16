@@ -59,7 +59,7 @@ module NoPain
 							     'X-NoPain-Password' => Digest::SHA256.hexdigest(@password)} )
       rescue => e
 	if e.methods.include?(:response)
-	  resp = e.response.code
+	  resp = e.response
 	elsif e.methods.include?(:message)
 	  resp = e.message
 	else
