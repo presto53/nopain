@@ -69,6 +69,24 @@ module NoPain
       JSON.parse(resp) rescue { error: resp }
     end
 
+    def delete(item)
+      begin
+        resp = RestClient.delete("#{@url}/#{item}", params: @params, 
+			                         'X-NoPain-Login' => @login, 
+						 'X-NoPain-Password' => Digest::SHA256.hexdigest(@password) )
+      rescue => e
+	if e.methods.include?(:response)
+	  resp = e.response.code
+	elsif e.methods.include?(:message)
+	  resp = e.message
+	else
+	  resp = 'Unknown error'
+	end
+	@error = true
+      end
+      JSON.parse(resp) rescue { error: resp }
+    end
+
     def read_options
       doc = <<DOCOPT
 Client for NoPain installer.
@@ -118,6 +136,10 @@ def get_conf
     @client.get('host')
 end
 
+def delete_conf
+    @client.delete('host')
+end
+
 def set_conf(conf)
   @client.set('host',conf)
 end
@@ -146,7 +168,7 @@ elsif @client.options['boot']
 elsif @client.options['install']
   puts 'Not implemented yet'
 elsif @client.options['delete']
-  puts 'Not implemented yet'
+  ap delete_conf
 else
   puts 'Some shit happened. Call 8-800-SPORTLOTO.'
 end

@@ -61,6 +61,14 @@ module NoPaIn
 	env['api.format'] = :binary
 	params[:uuid] ? NoPain::Host.find_by(uuid: params[:uuid]).install_script : {error: 'you need to specify uuid'}
       end
+      delete do
+	hosts = find_hosts(params)
+	if hosts && !hosts.empty?
+	  hosts.each {|host| host.delete}
+	end
+	status 200
+	{status: 'complete'}
+      end
     end
 
     resource :ipxe do
