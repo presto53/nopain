@@ -1,0 +1,4 @@
+---
+server: 'http://192.168.1.1:9292/api/'
+login: 'test'
+password: 'password'
