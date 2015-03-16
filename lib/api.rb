@@ -66,37 +66,7 @@ module NoPaIn
 	end
       end
       post do
-	begin
-	  conf = JSON.parse(Base64.decode64(params['conf']))
-	  result = Array.new
-	  conf.each do |item|
-	    if item['_id']
-	      image = NoPain::BootImage.find_by(id: item['_id'])
-	    else
-	      image = NoPain::BootImage.new
-	      create = true
-	    end
-	    if image
-	      item.each { |key,value| image[key] = value }
-	      name = item['name']? item['name'] : item
-	      if image.changed?
-		result << "fail while #{create ? 'create' : 'modify'} #{name}" unless image.save
-	      end
-	    else
-	      result << "fail while modify #{item}"
-	    end
-	  end
-	  if result.empty?
-	    status 200
-	    result = 'complete'
-	  else
-	    status 400
-	  end
-	  {status: result}
-	rescue
-	  status 400
-	  {error: 'Error while parsing configuration.'}
-	end
+	modify(params, :image)
       end
     end
 
@@ -119,37 +89,7 @@ module NoPaIn
 	end
       end
       post do
-	begin
-	  conf = JSON.parse(Base64.decode64(params['conf']))
-	  result = Array.new
-	  conf.each do |item|
-	    if item['_id']
-	      image = NoPain::InstallScript.find_by(id: item['_id'])
-	    else
-	      image = NoPain::InstallScript.new
-	      create = true
-	    end
-	    if image
-	      item.each { |key,value| image[key] = value }
-	      name = item['name']? item['name'] : item
-	      if image.changed?
-		result << "fail while #{create ? 'create' : 'modify'} #{name}" unless image.save
-	      end
-	    else
-	      result << "fail while modify #{item}"
-	    end
-	  end
-	  if result.empty?
-	    status 200
-	    result = 'complete'
-	  else
-	    status 400
-	  end
-	  {status: result}
-	rescue
-	  status 400
-	  {error: 'Error while parsing configuration.'}
-	end
+	modify(params, :script)
       end
     end
 
@@ -194,6 +134,57 @@ module NoPaIn
 	  expanded_items << tmp_item
 	end
 	expanded_items
+      end
+
+      def modify(params,type)
+	begin
+	  conf = JSON.parse(Base64.decode64(params['conf']))
+	  result = Array.new
+	  conf.each do |item|
+	    script = find_or_create(item, type)
+	    unit = script[:item]
+	    create = script[:new]
+	    ap unit
+	    ap create
+	    if unit
+	      item.each { |key,value| unit[key] = value }
+	      name = item['name']? item['name'] : item
+	      if unit.changed?
+		result << "fail while #{create ? 'create' : 'modify'} #{name}" unless unit.save
+	      end
+	    else
+	      result << "fail while modify #{item}"
+	    end
+	  end
+	  if result.empty?
+	    status 200
+	    result = 'complete'
+	  else
+	    status 400
+	  end
+	  {status: result}
+	rescue
+	  status 400
+	  {error: 'Error while parsing configuration.'}
+	end
+      end
+
+      def find_or_create(item, type)
+	result = Hash.new
+	case type
+	when :script
+	  klass = NoPain::InstallScript
+	when :image
+	  klass = NoPain::BootImage
+	end
+	if item['_id']
+	  result[:item] = klass.find_by(id: item['_id'])
+	  result[:new] = false
+	else
+	  result[:item] = klass.new
+	  result[:new] = true
+	end
+	result
       end
 
       def find_images(params)
