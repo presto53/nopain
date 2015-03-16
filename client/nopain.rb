@@ -75,11 +75,11 @@ module NoPain
 Client for NoPain installer.
 
 Usage:
-  #{__FILE__} (show|edit) host [<hostname>] [--tags=<tags>] [--boot=<boolean>] [--install=<boolean>]
-  #{__FILE__} (show|edit) host --uuid=<uuid>
+  #{__FILE__} (show|edit|delete) host [<hostname>] [--tags=<tags>] [--boot=<boolean>] [--install=<boolean>]
+  #{__FILE__} (show|edit|delete) host --uuid=<uuid>
+  #{__FILE__} (show|edit|delete) (image|script) [<name>]
   #{__FILE__} (boot|install) (enable|disable) [<hostname>] [--tags=<tags>] [--boot=<boolean>] [--install=<boolean>]
   #{__FILE__} (boot|install) (enable|disable) --uuid=<uuid>
-  #{__FILE__} (show|edit) (image|script) [<name>]
   #{__FILE__} -h | --help
   #{__FILE__} -v | --version
 
@@ -154,6 +154,8 @@ elsif @client.options['edit']
 elsif @client.options['boot']
   puts 'Not implemented yet'
 elsif @client.options['install']
+  puts 'Not implemented yet'
+elsif @client.options['delete']
   puts 'Not implemented yet'
 else
   puts 'Some shit happened. Call 8-800-SPORTLOTO.'
