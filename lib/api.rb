@@ -68,7 +68,7 @@ module NoPaIn
       params do
 	requires :password, type: String, desc: "password"
 	requires :uuid, type: String, desc: "Host UUID", regexp: UUID
-	requires :ip, type: String, desc: "Temporary host IP received from DHCP server", regexp: UUID
+	requires :ip, type: String, desc: "Temporary host IP received from DHCP server", regexp: IP
       end
       post do
 	pxe_authenticate!(params[:password])
