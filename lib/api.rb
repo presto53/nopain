@@ -195,6 +195,7 @@ module NoPaIn
 	    logger.error "Error while reading boot image for #{host.uuid}"
 	else
 	  status 403
+	  {error: 'boot is turned off'}
 	end
       end
 
