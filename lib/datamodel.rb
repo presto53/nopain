@@ -21,7 +21,7 @@ module NoPain
       field :install_script, type: String
       field :boot_image, type: String
       validates :uuid, presence: true, format: { with: UUID }
-      validates :install_script, format: { with: FILENAME }, allow_nil: true
+      validates :install_script, format: { with: PATH }, allow_nil: true
       validates :boot_image, format: { with: FILENAME }, allow_nil: true
       validates_uniqueness_of :uuid, :hostname
       index({ uuid: 1, hostname: 1 }, { unique: true })

@@ -33,9 +33,9 @@ module NoPain
       @params[:uuid] = @options['--uuid'] if @options['--uuid']
     end
 
-    def get(item)
+    def get_conf
       begin
-        resp = RestClient.get("#{@url}/#{item}", params: @params, 
+        resp = RestClient.get("#{@url}/host", params: @params, 
 			                         'X-NoPain-Login' => @login, 
 						 'X-NoPain-Password' => Digest::SHA256.hexdigest(@password) )
       rescue => e
@@ -51,10 +51,10 @@ module NoPain
       JSON.parse(resp) rescue { error: resp }
     end
 
-    def set(item,conf)
+    def set_conf(conf)
       @params[:conf] = Base64.encode64(conf.to_json)
       begin
-        resp = RestClient.post("#{@url}/#{item}", @params, { 'X-NoPain-Login' => @login, 
+        resp = RestClient.post("#{@url}/host", @params, { 'X-NoPain-Login' => @login, 
 							     'X-NoPain-Password' => Digest::SHA256.hexdigest(@password)} )
       rescue => e
 	if e.methods.include?(:response)
@@ -69,9 +69,45 @@ module NoPain
       JSON.parse(resp) rescue { error: resp }
     end
 
-    def delete(item)
+    def set_boot
+      @params[:status] = self.options['enable'] ? :true : :false
       begin
-        resp = RestClient.delete("#{@url}/#{item}", params: @params, 
+        resp = RestClient.post("#{@url}/host/boot", @params, { 'X-NoPain-Login' => @login, 
+							     'X-NoPain-Password' => Digest::SHA256.hexdigest(@password)} )
+      rescue => e
+	if e.methods.include?(:response)
+	  resp = e.response
+	elsif e.methods.include?(:message)
+	  resp = e.message
+	else
+	  resp = 'Unknown error'
+	end
+	@error = true
+      end
+      JSON.parse(resp) rescue { error: resp }
+    end
+
+    def set_install
+      @params[:status] = self.options['enable'] ? :true : :false
+      begin
+        resp = RestClient.post("#{@url}/host/install", @params, { 'X-NoPain-Login' => @login, 
+							     'X-NoPain-Password' => Digest::SHA256.hexdigest(@password)} )
+      rescue => e
+	if e.methods.include?(:response)
+	  resp = e.response
+	elsif e.methods.include?(:message)
+	  resp = e.message
+	else
+	  resp = 'Unknown error'
+	end
+	@error = true
+      end
+      JSON.parse(resp) rescue { error: resp }
+    end
+
+    def delete
+      begin
+        resp = RestClient.delete("#{@url}/host", params: @params, 
 			                         'X-NoPain-Login' => @login, 
 						 'X-NoPain-Password' => Digest::SHA256.hexdigest(@password) )
       rescue => e
@@ -132,23 +168,11 @@ AwesomePrint.defaults = {
 
 @client = NoPain::Client.new
 
-def get_conf
-    @client.get('host')
-end
-
-def delete_conf
-    @client.delete('host')
-end
-
-def set_conf(conf)
-  @client.set('host',conf)
-end
-
 if @client.options['show']
-  ap get_conf
+  ap @client.get_conf
 elsif @client.options['edit']
   editor = ENV['EDITOR'] ? ENV['EDITOR'] : 'vi'
-  conf = get_conf
+  conf = @client.get_conf
   if @client.error
     ap conf 
     exit 1
@@ -157,18 +181,18 @@ elsif @client.options['edit']
     File.open(file, 'w') { |file| file.write(JSON.pretty_generate(conf)) }
     system("#{editor} #{file}")
     begin
-      ap set_conf(JSON.parse(File.read(file)))
+      ap @client.set_conf(JSON.parse(File.read(file)))
     rescue => e
       STDERR.puts "ERROR: #{e.message}"
     end
     File.delete(file)
   end
 elsif @client.options['boot']
-  puts 'Not implemented yet'
+  ap @client.set_boot
 elsif @client.options['install']
-  puts 'Not implemented yet'
+  ap @client.set_install
 elsif @client.options['delete']
-  ap delete_conf
+  ap @client.delete
 else
   puts 'Some shit happened. Call 8-800-SPORTLOTO.'
 end

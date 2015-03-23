@@ -6,7 +6,8 @@ module NoPain
       MAC=/\A([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}\z/
       PACKAGEROOT=/\A[a-zA-Z0-9:_&\/.%\z-]+\z/
       KERNEL=/\A[a-zA-Z0-9._-]+\z/
-      FILENAME=/\A[a-zA-Z0-9._\/-]+\z/
+      PATH=/\A[a-zA-Z0-9._\/-]+\z/
+      FILENAME=/\A[a-zA-Z0-9._-]+\z/
       DIRNAME=/\A[a-zA-Z0-9._-]+\z/
       HOSTNAME=/\A[a-zA-Z0-9.-]+\z/
       NAME=/\A[a-zA-Z0-9. _-]+\z/

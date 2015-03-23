@@ -23,7 +23,7 @@
 #
 # and, you'll have to watch "config/Guardfile" instead of "Guardfile"
 
-guard 'puma' do
+guard 'puma', :port => 9292 do
   watch('Gemfile.lock')
   watch(%r{^config|lib|api/.*})
 end

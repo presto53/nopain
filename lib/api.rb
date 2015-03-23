@@ -48,19 +48,59 @@ module NoPaIn
 	  {error: 'Not found'}
 	end
       end
+
+      desc "Switch boot for hosts"
+      post '/boot' do
+	hosts = find_hosts(params)
+	if hosts && !hosts.empty?
+	  hosts.each do |host|
+	    host.boot = params['status'] ? params['status'].to_sym : :false
+	    host.save
+	  end
+	  status 200
+	  hosts
+	else
+	  status 404
+	  {error: 'Not found'}
+	end
+      end
+
+      desc "Switch install for hosts"
+      post '/install' do
+	hosts = find_hosts(params)
+	if hosts && !hosts.empty?
+	  hosts.each do |host|
+	    host.install = params['status'] ? params['status'].to_sym : :false
+	    host.save
+	  end
+	  status 200
+	  hosts
+	else
+	  status 404
+	  {error: 'Not found'}
+	end
+      end
+
+      desc "Edit hosts configs"
       post do
 	modify(params)
       end
+
+      desc "Get environment variables"
       get '/env' do
 	content_type 'text/plain'
 	env['api.format'] = :binary
 	params[:uuid] ? NoPain::Host.find_by(uuid: params[:uuid]).env.join("\n") : {error: 'you need to specify uuid'}
       end
+
+      desc "Get install script"
       get '/install_script' do
 	content_type 'text/plain'
 	env['api.format'] = :binary
 	params[:uuid] ? NoPain::Host.find_by(uuid: params[:uuid]).install_script : {error: 'you need to specify uuid'}
       end
+
+      desc "Delete hosts"
       delete do
 	hosts = find_hosts(params)
 	if hosts && !hosts.empty?
@@ -86,7 +126,12 @@ module NoPaIn
 	  update_hwaddrs(host,params)
 	  host.checkin = Time.now
 	  host.save
-	  host.boot_image ? return_image(host) : status(404)
+	  if host.boot
+	    host.boot_image ? return_image(host) : status(404)
+	  else
+	    status 403
+	    {error: 'boot is turned off'}
+	  end
 	else
 	  create_host(params)
 	end
@@ -195,16 +240,11 @@ module NoPaIn
       end
 
       def return_image(host)
-	if host.boot
-	  status 200
-	  env['api.format'] = :binary
-	  content_type 'application/octet-stream'
-	  File.binread(NoPain::CONFIG['images_path'] + '/' + host.boot_image).force_encoding('utf-8') rescue \
-	    logger.error "Error while reading boot image for #{host.uuid}"
-	else
-	  status 403
-	  {error: 'boot is turned off'}
-	end
+	status 200
+	env['api.format'] = :binary
+	content_type 'application/octet-stream'
+	File.binread(NoPain::CONFIG['images_path'] + '/' + host.boot_image).force_encoding('utf-8') rescue \
+	  logger.error "Error while reading boot image for #{host.uuid}"
       end
 
       def pxe_authenticate!(password)
