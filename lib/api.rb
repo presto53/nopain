@@ -83,7 +83,7 @@ module NoPaIn
 
       desc "Edit hosts configs"
       post do
-	modify(params)
+	modify(:hosts,params)
       end
 
       desc "Get environment variables"
@@ -138,25 +138,75 @@ module NoPaIn
       end
     end
 
+    before do
+      authenticate!(headers['X-NoPain-Login'], headers['X-NoPain-Password'])
+    end
+    params do
+      optional :name, type: String, desc: "String representing name, could be a regexp."
+      optional :network, type: String, desc: "String representing network in CIDR notation"
+      optional :vlan, type: Fixnum, desc: "Number representing vlan"
+      at_least_one_of :name, :network, :vlan
+    end
+    resource :network do
+      desc "Get networks"
+      get do
+	networks = find_networks(params)
+	if networks && !networks.empty?
+	  fixed_networks = Array.new
+	  networks.each do |network|
+	    tmp_network = JSON.parse(network.to_json)
+	    tmp_network['_id'] = network.id.to_s
+	    fixed_networks << tmp_network
+	  end
+	  status 200
+	  fixed_networks
+	else
+	  status 404
+	  {error: 'Not found'}
+	end
+      end
+
+      desc "Edit networks"
+      post do
+	modify(:networks,params)
+      end
+
+      desc "Delete networks"
+      delete do
+	networks = find_networks(params)
+	if networks && !networks.empty?
+	  networks.each {|network| network.delete}
+	end
+	status 200
+	{status: 'complete'}
+      end
+    end
+
     helpers do
-      def modify(params)
+      def modify(type, params)
 	begin
 	  conf = JSON.parse(Base64.decode64(params['conf']))
 	  errors = Array.new
-	  conf.each do |host|
-	    tmp_host = NoPain::Host.find(host['_id']) if host['_id']
-	    tmp_host = NoPain::Host.new unless tmp_host
-	    host.each_key do |field|
-	      tmp_host[field] = host[field]
+	  conf.each do |c|
+	    case type
+	    when :hosts
+	      tmp = NoPain::Host.find(c['_id']) if c['_id']
+	      tmp = NoPain::Host.new unless tmp
+	    when :networks
+	      tmp = NoPain::Network.find(c['_id']) if c['_id']
+	      tmp = NoPain::Network.new unless tmp
 	    end
-	    errors << {host: host, errors: tmp_host.errors.messages} unless tmp_host.save
+	    c.each_key do |field|
+	      tmp[field] = c[field]
+	    end
+	    errors << {item: c, errors: tmp.errors.messages} unless tmp.save
 	  end
 	  if errors.empty?
 	    status 200
 	    {status: 'complete'}
 	  else
 	    status 400
-	    {error: "Error while creating/modifying hosts: #{errors}"}
+	    {error: "Error while creating/modifying items: #{errors}"}
 	  end
 	rescue
 	  status 400
@@ -164,23 +214,21 @@ module NoPaIn
 	end
       end
 
+      def find_networks(params)
+	networks = NoPain::Network.where(name: /#{params[:name]}/)
+	networks = networks.where(vlan: params[:vlan]) if params[:vlan]
+	networks = networks.where(network: /#{params[:network]}/) if params[:network]
+	networks
+      end
+
       def find_hosts(params)
 	if params[:uuid]
 	  hosts = NoPain::Host.where(uuid: params[:uuid])
 	else
-	  hosts = filter_by_hostname(hosts, params[:hostname]) if params[:hostname]
+	  hosts = NoPain::Host.where(hostname: /#{params[:hostname]}/)
+	  hosts = hosts.where(boot: params[:boot]) if params[:boot]
+	  hosts = hosts.where(install: params[:install]) if params[:install]
 	  hosts = filter_by_tags(hosts, params[:tags]) if params[:tags]
-	  hosts = filter_by_boot(hosts, params[:boot]) if params[:boot]
-	  hosts = filter_by_install(hosts, params[:install]) if params[:install]
-	end
-	hosts
-      end
-
-      def filter_by_hostname(hosts, hostname)
-	if hosts
-	  hosts = hosts.where(hostname: /#{hostname}/)
-	else
-	  hosts = NoPain::Host.where(hostname: /#{hostname}/)
 	end
 	hosts
       end
@@ -198,24 +246,6 @@ module NoPaIn
 	  else
 	    hosts = NoPain::Host.nin(tags: @nintags)
 	  end
-	end
-	hosts
-      end
-
-      def filter_by_boot(hosts, boot)
-	if hosts
-	  hosts = hosts.where(boot: boot)
-	else
-	  hosts = NoPain::Host.where(boot: boot)
-	end
-	hosts
-      end
-
-      def filter_by_install(hosts, install)
-	if hosts
-	  hosts = hosts.where(install: install)
-	else
-	  hosts = NoPain::Host.where(install: install)
 	end
 	hosts
       end

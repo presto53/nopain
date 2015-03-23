@@ -44,6 +44,6 @@ module NoPain
       validates :name, presence: true, format: { with: NETWORK_NAME }
       validates :network, presence: true, format: { with: NETWORK }
       validates :vlan, presence: true, format: { with: VLAN }
-      validates_uniqueness_of :name
+      validates_uniqueness_of :name, :network
     end
 end

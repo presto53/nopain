@@ -26,16 +26,19 @@ module NoPain
       @params = Hash.new
       @options['<hostname>'] ||= '.*'
       @options['<name>'] ||= '.*'
-      @params[:hostname] = @options['<hostname>'] unless @options['--uuid']
+      @params[:name] = @options['<name>'] if @options['network']
+      @params[:hostname] = @options['<hostname>'] unless (@options['--uuid'] || @options['network'])
       @params[:tags] = @options['--tags'] if @options['--tags']
       @params[:boot] = @options['--boot'] if @options['--boot']
       @params[:install] = @options['--install'] if @options['--install']
       @params[:uuid] = @options['--uuid'] if @options['--uuid']
+      @params[:vlan] = @options['--vlan'] if @options['--vlan']
+      @params[:network] = @options['--network'] if @options['--network']
     end
 
-    def get_conf
+    def get_conf(item)
       begin
-        resp = RestClient.get("#{@url}/host", params: @params, 
+        resp = RestClient.get("#{@url}/#{item}", params: @params, 
 			                         'X-NoPain-Login' => @login, 
 						 'X-NoPain-Password' => Digest::SHA256.hexdigest(@password) )
       rescue => e
@@ -51,10 +54,10 @@ module NoPain
       JSON.parse(resp) rescue { error: resp }
     end
 
-    def set_conf(conf)
+    def set_conf(item,conf)
       @params[:conf] = Base64.encode64(conf.to_json)
       begin
-        resp = RestClient.post("#{@url}/host", @params, { 'X-NoPain-Login' => @login, 
+        resp = RestClient.post("#{@url}/#{item}", @params, { 'X-NoPain-Login' => @login, 
 							     'X-NoPain-Password' => Digest::SHA256.hexdigest(@password)} )
       rescue => e
 	if e.methods.include?(:response)
@@ -105,9 +108,9 @@ module NoPain
       JSON.parse(resp) rescue { error: resp }
     end
 
-    def delete
+    def delete(item)
       begin
-        resp = RestClient.delete("#{@url}/host", params: @params, 
+        resp = RestClient.delete("#{@url}/#{item}", params: @params, 
 			                         'X-NoPain-Login' => @login, 
 						 'X-NoPain-Password' => Digest::SHA256.hexdigest(@password) )
       rescue => e
@@ -132,6 +135,7 @@ Usage:
   #{__FILE__} (show|edit|delete) host --uuid=<uuid>
   #{__FILE__} (boot|install) (enable|disable) [<hostname>] [--tags=<tags>] [--boot=<boolean>] [--install=<boolean>]
   #{__FILE__} (boot|install) (enable|disable) --uuid=<uuid>
+  #{__FILE__} (show|edit|delete) network [<name>] [--vlan=<vlan>] [--network=<network>]
   #{__FILE__} -h | --help
   #{__FILE__} -v | --version
 
@@ -142,6 +146,8 @@ Options:
   -b --boot=<boolean>         Boot filter (true/false).
   -i --install=<boolean>      Install filter (true/false).
   -u --uuid=<uuid>            Host UUID.
+  -n --network=<network>      Network.
+  --vlan=<vlan>		      Vlan.
 
 DOCOPT
       begin
@@ -168,11 +174,20 @@ AwesomePrint.defaults = {
 
 @client = NoPain::Client.new
 
+if @client.options['network']
+  @item = 'network'
+elsif @client.options['host']
+  @item = 'host'
+else
+  puts 'some bad shit happened'
+  exit 1
+end
+
 if @client.options['show']
-  ap @client.get_conf
+  ap @client.get_conf(@item)
 elsif @client.options['edit']
   editor = ENV['EDITOR'] ? ENV['EDITOR'] : 'vi'
-  conf = @client.get_conf
+  conf = @client.get_conf(@item)
   if @client.error
     ap conf 
     exit 1
@@ -181,7 +196,7 @@ elsif @client.options['edit']
     File.open(file, 'w') { |file| file.write(JSON.pretty_generate(conf)) }
     system("#{editor} #{file}")
     begin
-      ap @client.set_conf(JSON.parse(File.read(file)))
+      ap @client.set_conf(@item,JSON.parse(File.read(file)))
     rescue => e
       STDERR.puts "ERROR: #{e.message}"
     end
@@ -192,7 +207,7 @@ elsif @client.options['boot']
 elsif @client.options['install']
   ap @client.set_install
 elsif @client.options['delete']
-  ap @client.delete
+  ap @client.delete(@item)
 else
   puts 'Some shit happened. Call 8-800-SPORTLOTO.'
 end
