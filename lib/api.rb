@@ -90,14 +90,22 @@ module NoPaIn
       get '/env' do
 	content_type 'text/plain'
 	env['api.format'] = :binary
-	params[:uuid] ? NoPain::Host.find_by(uuid: params[:uuid]).env.join("\n") : {error: 'you need to specify uuid'}
+	if params[:uuid]
+	  NoPain::Host.find_by(uuid: params[:uuid]).env.join("\n")
+	else
+	  {error: 'you need to specify uuid'}
+	end
       end
 
       desc "Get install script"
       get '/install_script' do
 	content_type 'text/plain'
 	env['api.format'] = :binary
-	params[:uuid] ? NoPain::Host.find_by(uuid: params[:uuid]).install_script : {error: 'you need to specify uuid'}
+	if params[:uuid]
+	  NoPain::Host.find_by(uuid: params[:uuid]).install_script
+	else
+	  {error: 'you need to specify uuid'}
+	end
       end
 
       desc "Delete hosts"
