@@ -6,6 +6,7 @@ require 'net-ldap'
 require 'base64'
 require 'digest'
 require 'awesome_print'
+require 'ipaddr'
 
 module NoPaIn
   class API < Grape::API
