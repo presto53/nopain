@@ -50,11 +50,11 @@ module NoPaIn
       end
 
       desc "Switch boot for hosts"
-      post '/boot' do
+      get '/boot' do
 	hosts = find_hosts(params)
 	if hosts && !hosts.empty?
 	  hosts.each do |host|
-	    host.boot = params['status'] ? params['status'].to_sym : :false
+	    host.boot = params[:status] if params[:status]
 	    host.save
 	  end
 	  status 200
@@ -66,11 +66,11 @@ module NoPaIn
       end
 
       desc "Switch install for hosts"
-      post '/install' do
+      get '/install' do
 	hosts = find_hosts(params)
 	if hosts && !hosts.empty?
 	  hosts.each do |host|
-	    host.install = params['status'] ? params['status'].to_sym : :false
+	    host.install = params[:status] if params[:status]
 	    host.save
 	  end
 	  status 200

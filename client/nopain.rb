@@ -75,7 +75,7 @@ module NoPain
     def set_boot
       @params[:status] = self.options['enable'] ? :true : :false
       begin
-        resp = RestClient.post("#{@url}/host/boot", @params, { 'X-NoPain-Login' => @login, 
+        resp = RestClient.get("#{@url}/host/boot", params: @params, { 'X-NoPain-Login' => @login, 
 							     'X-NoPain-Password' => Digest::SHA256.hexdigest(@password)} )
       rescue => e
 	if e.methods.include?(:response)
@@ -93,7 +93,7 @@ module NoPain
     def set_install
       @params[:status] = self.options['enable'] ? :true : :false
       begin
-        resp = RestClient.post("#{@url}/host/install", @params, { 'X-NoPain-Login' => @login, 
+        resp = RestClient.get("#{@url}/host/install", params: @params, { 'X-NoPain-Login' => @login, 
 							     'X-NoPain-Password' => Digest::SHA256.hexdigest(@password)} )
       rescue => e
 	if e.methods.include?(:response)
