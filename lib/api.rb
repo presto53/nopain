@@ -93,33 +93,33 @@ module NoPaIn
 	env['api.format'] = :binary
 	if params[:uuid]
 	  host = NoPain::Host.find_by(uuid: params[:uuid])
-	  if host
+	  if host && host.install
 	    env = host.env.join("\n") if host.env
 	    script = '. ' + host.install_script if host.install_script
-            ip = Resolv.getaddress hostname rescue ''
-	    NoPain::Network.each do |config|
-	      @net_config = config
-	      break if IPAddr.new(config.network).include?(ip)
-	    end
-            reply = Array.new
-	    if @net_config
-	      reply << "ip_address=#{ip}"
-	      reply << "subnet=#{@net_config.network.split('/')[1]}"
-	      reply << "vlan=#{@net_config.vlan}" unless @net_config.vlan.to_i == 0
-	      reply << "defaultrouter=#{IPAddr.new(@net_config.network).to_range.to_a[1].to_s}"
-	    end
-	    reply << "HOSTNAME=#{host.hostname}"
-            reply << env 
-            reply << script
-	    if host.install
+            ip = Resolv.getaddress host.hostname rescue nil
+	    if ip
+	      NoPain::Network.each do |config|
+		@net_config = config
+		break if IPAddr.new(config.network).include?(ip)
+	      end
+	      reply = Array.new
+	      if @net_config
+		reply << "ip_address=#{ip}"
+		reply << "subnet=#{@net_config.network.split('/')[1]}"
+		reply << "vlan=#{@net_config.vlan}" unless @net_config.vlan.to_i == 0
+		reply << "defaultrouter=#{IPAddr.new(@net_config.network).to_range.to_a[1].to_s}"
+	      end
+	      reply << "HOSTNAME=#{host.hostname}"
+	      reply << env 
+	      reply << script
 	      reply.join("\n")
 	    else
-	      status 403
-	      {error: 'Install is turned off for host.'}
+	      status 500
+	      {error: "Can not resolve #{host.hostname}"}
 	    end
 	  else
 	    status 404
-	    {error: 'Host not found.'}
+	    {error: 'Host not found or install is turned off.'}
 	  end
 	else
 	  {error: 'you need to specify uuid'}
