@@ -178,6 +178,10 @@ if @client.options['network']
   @item = 'network'
 elsif @client.options['host']
   @item = 'host'
+elsif @client.options['boot']
+  @item = 'host'
+elsif @client.options['install']
+  @item = 'host'
 else
   puts 'some bad shit happened'
   exit 1
