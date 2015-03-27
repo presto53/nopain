@@ -110,7 +110,7 @@ module NoPaIn
 	    reply << "HOSTNAME=#{host.hostname}"
             reply << env 
             reply << script
-	    reply.join("\n")
+	    reply.join("\n") if host.install
 	  else
 	    status 404
 	    {error: 'Host not found.'}
