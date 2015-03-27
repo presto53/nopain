@@ -86,23 +86,20 @@ module NoPaIn
 	modify(:hosts,params)
       end
 
-      desc "Get environment variables"
-      get '/env' do
-	content_type 'text/plain'
-	env['api.format'] = :binary
-	if params[:uuid]
-	  NoPain::Host.find_by(uuid: params[:uuid]).env.join("\n")
-	else
-	  {error: 'you need to specify uuid'}
-	end
-      end
-
       desc "Get install script"
       get '/install_script' do
 	content_type 'text/plain'
 	env['api.format'] = :binary
 	if params[:uuid]
-	  NoPain::Host.find_by(uuid: params[:uuid]).install_script
+	  host = NoPain::Host.find_by(uuid: params[:uuid])
+	  if host
+	    env = host.env.join("\n") if host.env
+	    script = '. ' + host.install_script if host.install_script
+	    env + "\n" + script
+	  else
+	    status 404
+	    {error: 'Host not found.'}
+	  end
 	else
 	  {error: 'you need to specify uuid'}
 	end
