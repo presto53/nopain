@@ -22,5 +22,4 @@ set idx:int32 0
 imgfetch --name img --timeout 3000 http://192.168.1.1:9292/api/ipxe##params || goto end
 boot img
 :end
-exit 0
-
+sanboot --no-describe --drive 0x80
