@@ -1,10 +1,13 @@
 #!ipxe
 prompt --key 0x02 --timeout 2000 Press Ctrl-B for the iPXE command line... && shell ||
-dhcp
 set password NoPain
+set server ${uuid}
+set user-class PXEClient
+set uuid:string INVALID
+dhcp
 
 params
-param uuid ${uuid}
+param uuid ${server}
 param password ${password}
 param ip ${ip}
 
@@ -16,5 +19,8 @@ set idx:int32 0
   param net${idx}_chip ${net${idx}/chip}
   inc idx && goto loop
 :loop_done
-#chain --timeout 10 http://pxeboot.${domain}/blondy/boot##params || shell
-chain --timeout 3000 http://192.168.1.1:9292/api/ipxe##params || reboot
+imgfetch --name img --timeout 3000 http://192.168.1.1:9292/api/ipxe##params || goto end
+boot img
+:end
+exit 0
+
